@@ -11,5 +11,6 @@ class User(Base):
     username : Mapped[str] = mapped_column(String(length=255), index=True, nullable=False)
     password: Mapped[str] = mapped_column(String(length=255), nullable=False)
     admin: Mapped[bool] = mapped_column(Boolean, index=True, default=False, server_default=sa.false())
+    banned: Mapped[bool] = mapped_column(Boolean, index=True, default=False, server_default=sa.false())
     updated_at: Mapped[updated_at]
     created_at: Mapped[created_at]

@@ -5,7 +5,7 @@ from config.jwt import security
 from dependencies import DB_DEP, AccessTokenDep, RefreshTokenDep
 from schemas.users import UserCreate, UserGet, UserUpdate
 from models.user import User
-from utils import hash_password, verify_password
+from utils import hash_password, verify_password, check_admin
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import apaginate
 
@@ -142,15 +142,64 @@ async def delete_user(
 
 
 
-@router.delete("/soft-delete", summary="Ban user account")
+@router.delete("/soft-delete/{user_pk}", summary="Ban user account")
 async def soft_delete_user(
         session : DB_DEP,
         payload: AccessTokenDep,
+        user_pk: int,
 ):
-    ...
+    is_admin = await check_admin(payload, session)
+    if not is_admin:
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    stmt = select(User).where(User.pk == user_pk)
+    result = await session.execute(stmt)
+    user_to_ban = result.scalar_one_or_none()
+
+    if not user_to_ban:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    # ban function
+    user_to_ban.banned = True
+    session.add(user_to_ban)
+    await session.commit()
+    await session.refresh(user_to_ban)
+    return UserGet.model_validate(user_to_ban)
+
+
 
 
 @router.get("/all_users", summary="Return all users", response_model=Page[UserGet])
-async def get_all_users(session: DB_DEP) -> Page[UserGet]:
-  stmt = select(User).order_by(User.pk)
-  return await apaginate(session, stmt)
+async def get_all_users(session: DB_DEP, payload: AccessTokenDep):
+    is_admin = await check_admin(payload, session)
+    if not is_admin:
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+    stmt = select(User).order_by(User.pk)
+    return await apaginate(session, stmt)
+
+
+
+
+@router.patch("/update-me", summary="Update user info")
+async def update_me(
+        session: DB_DEP,
+        payload: AccessTokenDep,
+        user_data: UserUpdate
+):
+    stmt = select(User).where(User.pk == int(payload.sub))
+    result = await session.execute(stmt)
+    found_user = result.scalar_one_or_none()
+
+    if not found_user:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    if user_data.username:
+        found_user.username = user_data.username
+
+    if user_data.password:
+        found_user.password = hash_password(user_data.password)
+
+    session.add(found_user)
+    await session.commit()
+    return UserGet.model_validate(found_user)

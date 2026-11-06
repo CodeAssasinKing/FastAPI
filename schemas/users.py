@@ -21,6 +21,7 @@ class UserGet(BaseModel):
     pk: int
     username: str
     admin: bool
+    banned: bool
     updated_at: datetime
     created_at: datetime
 

@@ -12,6 +12,9 @@ services:
     environment:
       JWT_SECRET_KEY : ${JWT_SECRET_KEY}
       JWT_ACCESS_COOKIE_NAME : ${JWT_ACCESS_COOKIE_NAME}
+      POSTGRES_DB : ${POSTGRES_DB}
+      POSTGRES_USER : ${POSTGRES_USER}
+      POSTGRES_PASSWORD : ${POSTGRES_PASSWORD}
     build:
       context: .
     ports:

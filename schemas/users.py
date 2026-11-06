@@ -20,7 +20,7 @@ class UserUpdate(BaseModel):
 class UserGet(BaseModel):
     pk: int
     username: str
-    is_admin: bool
+    admin: bool
     updated_at: datetime
     created_at: datetime
 
